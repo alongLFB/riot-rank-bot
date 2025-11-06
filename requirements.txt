@@ -1,0 +1,6 @@
+discord.py
+python-dotenv
+pyke-lol
+apscheduler
+requests
+aiofiles

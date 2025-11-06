@@ -1,0 +1,16 @@
+version: '3'
+services:
+  riot_rank_bot:
+    build: .
+    container_name: riot_rank_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./rank_list2.html:/app/rank_list2.html
+      - ./id_list.txt:/app/id_list.txt
+    command: >
+      sh -c "
+      python rank_job.py &
+      python bot.py
+      "
