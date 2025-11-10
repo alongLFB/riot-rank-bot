@@ -1,10 +1,8 @@
-# bot.py
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from datetime import time as dtime
-from datetime import timedelta
 
 import aiofiles
 import discord
@@ -24,6 +22,9 @@ REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 # Match lol_rank_tracker which reads id_list.txt by default
 ID_LIST_FILE = os.getenv("ID_LIST_FILE", "id_list.txt")
 
+# 定义 UAE 时区 (UTC+4)
+UAE_TZ = timezone(timedelta(hours=4))
+
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
@@ -36,21 +37,35 @@ _id_list_mtime = None
 async def load_id_list():
     global _id_list, _id_list_mtime
     try:
-        stat = await aiofiles.os.stat(ID_LIST_FILE)
+        stat = os.stat(ID_LIST_FILE)
         mtime = stat.st_mtime
-    except Exception:
+    except FileNotFoundError:
+        logging.warning(f"ID list file not found: {ID_LIST_FILE}")
+        _id_list = []
+        _id_list_mtime = None
+        return
+    except Exception as e:
+        logging.error(f"Failed to stat {ID_LIST_FILE}: {e}")
         _id_list = []
         _id_list_mtime = None
         return
 
     if _id_list_mtime == mtime:
         return
-    async with aiofiles.open(ID_LIST_FILE, "r", encoding="utf-8") as f:
-        lines = await f.readlines()
-    cleaned = [ln.strip() for ln in lines if ln.strip() and '#' in ln and not ln.strip().startswith('#')]
-    _id_list = cleaned
-    _id_list_mtime = mtime
-    logging.info(f"Loaded {_id_list_mtime}: {_id_list[:10]} (total {len(_id_list)})")
+
+    try:
+        async with aiofiles.open(ID_LIST_FILE, "r", encoding="utf-8") as f:
+            lines = await f.readlines()
+        cleaned = [ln.strip() for ln in lines if ln.strip() and '#' in ln and not ln.strip().startswith('#')]
+        _id_list = cleaned
+        _id_list_mtime = mtime
+        logging.info(f"Loaded {len(_id_list)} IDs from {ID_LIST_FILE} (mtime: {mtime})")
+        if _id_list:
+            logging.info(f"Sample IDs: {_id_list[:3]}")
+        else:
+            logging.warning(f"No valid IDs found in {ID_LIST_FILE}")
+    except Exception as e:
+        logging.error(f"Failed to read {ID_LIST_FILE}: {e}")
 
 
 # 简单的模糊匹配自动补全（按前缀）
@@ -117,7 +132,7 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
         return
 
     display_name = f"{data.get('game_name') or name}#{data.get('tag_line') or tag}"
-    embed = discord.Embed(title=display_name, timestamp=(datetime.utcnow() + timedelta(hours=4)))
+    embed = discord.Embed(title=display_name, timestamp=datetime.now(UAE_TZ))
 
     if status == "unranked":
         embed.add_field(name="段位", value="未定级", inline=True)
@@ -138,20 +153,23 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
     await interaction.followup.send(embed=embed)
 
 
-def _next_run_seconds(hour=3, minute=0, tz_offset_hours=9):
-    now_utc = datetime.utcnow()
-    kst_now = now_utc + timedelta(hours=tz_offset_hours)
-    target_today = datetime.combine(kst_now.date(), dtime(hour=hour, minute=minute))
-    if kst_now >= target_today:
+def _next_run_seconds(hour=3, minute=0):
+    """计算距离下一次运行的秒数（UAE时区）"""
+    now_uae = datetime.now(UAE_TZ)
+    target_today = datetime.combine(now_uae.date(), dtime(hour=hour, minute=minute))
+    target_today = target_today.replace(tzinfo=UAE_TZ)
+
+    if now_uae >= target_today:
         target_today = target_today + timedelta(days=1)
-    delta_kst = target_today - kst_now
-    return delta_kst.total_seconds()
+
+    delta = target_today - now_uae
+    return delta.total_seconds()
 
 
 @tasks.loop(count=None)
 async def daily_refresh_task():
-    wait_seconds = _next_run_seconds(hour=3, minute=0, tz_offset_hours=9)
-    logging.info(f"Daily refresh will run in {wait_seconds/3600:.2f} hours.")
+    wait_seconds = _next_run_seconds(hour=3, minute=0)
+    logging.info(f"Daily refresh will run in {wait_seconds/3600:.2f} hours (03:00 UAE time).")
     await asyncio.sleep(wait_seconds)
 
     while True:
@@ -187,8 +205,12 @@ async def daily_refresh_task():
             try:
                 channel = bot.get_channel(int(REPORT_CHANNEL_ID)) or await bot.fetch_channel(int(REPORT_CHANNEL_ID))
                 if channel:
-                    embed = discord.Embed(title="每日段位排行榜已更新", description=f"共查询 {len(players)} 位玩家", timestamp=(datetime.utcnow() + timedelta(hours=4)))
-                    embed.set_footer(text="RankBot 自动更新（03:00 KST）")
+                    embed = discord.Embed(
+                        title="每日段位排行榜已更新",
+                        description=f"共查询 {len(players)} 位玩家",
+                        timestamp=datetime.now(UAE_TZ)
+                    )
+                    embed.set_footer(text="RankBot 自动更新（03:00 UAE）")
                     file = discord.File(output_file, filename=output_file)
                     await channel.send(embed=embed, file=file)
                     logging.info("Uploaded daily HTML to channel.")
