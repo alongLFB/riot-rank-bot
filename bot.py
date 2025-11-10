@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from datetime import time as dtime
+from datetime import timedelta, timezone
 
 import aiofiles
 import discord
@@ -81,6 +82,37 @@ async def autocomplete_ids(interaction: discord.Interaction, current: str):
     return [app_commands.Choice(name=s, value=s) for s in suggestions]
 
 
+async def do_refresh():
+    """执行排行榜刷新的核心逻辑"""
+    await load_id_list()
+    players = []
+
+    async def worker(entry):
+        name, tag = parse_riot_id(entry)
+        try:
+            data = await asyncio.to_thread(get_player_rank, name, tag)
+            if data:
+                players.append(data)
+        except Exception:
+            logging.exception(f"Failed to fetch {entry}")
+
+    chunk_size = 50
+    for i in range(0, len(_id_list), chunk_size):
+        batch = _id_list[i:i+chunk_size]
+        tasks_ = [asyncio.create_task(worker(e)) for e in batch]
+        await asyncio.gather(*tasks_)
+        await asyncio.sleep(1)
+
+    players.sort(key=lambda x: x.get("total_score", 0), reverse=True)
+
+    html = generate_html(players)
+    output_file = "rank_list_daily.html"
+    async with aiofiles.open(output_file, "w", encoding="utf-8") as f:
+        await f.write(html)
+
+    return players, output_file
+
+
 @bot.event
 async def on_ready():
     logging.info(f"Bot logged in as {bot.user} (id: {bot.user.id})")
@@ -140,6 +172,7 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
     else:
         embed.add_field(name="段位", value=f"{data.get('tier','-')} {data.get('rank','')}", inline=True)
         embed.add_field(name="LP", value=str(data.get('lp', 0)), inline=True)
+        embed.add_field(name="分数", value=str(data.get('total_score', 0)), inline=True)
 
     wins = data.get('wins', 0)
     losses = data.get('losses', 0)
@@ -151,6 +184,32 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
 
     embed.set_footer(text="由 RankBot 提供 | 数据来自 Riot API")
     await interaction.followup.send(embed=embed)
+
+
+# /refresh 手动刷新命令
+@tree.command(name="refresh", description="手动触发段位排行榜刷新(仅管理员可操作)")
+@app_commands.default_permissions(administrator=True)
+async def refresh_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    logging.info(f"Manual refresh triggered by {interaction.user}")
+
+    try:
+        await interaction.followup.send("🔄 开始刷新排行榜，请稍候...")
+        players, output_file = await do_refresh()
+
+        embed = discord.Embed(
+            title="✅ 手动刷新完成[点击查看完整排行榜]",
+            description=f"共查询 {len(players)} 位玩家",
+            timestamp=datetime.now(UAE_TZ),
+            url="https://melolrank.alonglfb.com/"
+        )
+        embed.set_footer(text=f"手动刷新 by {interaction.user}")
+        await interaction.followup.send(embed=embed)
+        logging.info(f"Manual refresh completed: {len(players)} players")
+
+    except Exception as e:
+        logging.exception("Manual refresh failed")
+        await interaction.followup.send(f"❌ 刷新失败：{e}")
 
 
 def _next_run_seconds(hour=3, minute=0):
@@ -174,48 +233,28 @@ async def daily_refresh_task():
 
     while True:
         logging.info("Starting daily rank refresh...")
-        await load_id_list()
-        players = []
 
-        async def worker(entry):
-            name, tag = parse_riot_id(entry)
-            try:
-                data = await asyncio.to_thread(get_player_rank, name, tag)
-                if data:
-                    players.append(data)
-            except Exception:
-                logging.exception(f"Failed to fetch {entry}")
+        try:
+            players, output_file = await do_refresh()
+            logging.info(f"Daily HTML saved to {output_file} (players: {len(players)})")
 
-        chunk_size = 50
-        for i in range(0, len(_id_list), chunk_size):
-            batch = _id_list[i:i+chunk_size]
-            tasks_ = [asyncio.create_task(worker(e)) for e in batch]
-            await asyncio.gather(*tasks_)
-            await asyncio.sleep(1)
-
-        players.sort(key=lambda x: x.get("total_score", 0), reverse=True)
-
-        html = generate_html(players)
-        output_file = "rank_list_daily.html"
-        async with aiofiles.open(output_file, "w", encoding="utf-8") as f:
-            await f.write(html)
-        logging.info(f"Daily HTML saved to {output_file} (players: {len(players)})")
-
-        if REPORT_CHANNEL_ID:
-            try:
-                channel = bot.get_channel(int(REPORT_CHANNEL_ID)) or await bot.fetch_channel(int(REPORT_CHANNEL_ID))
-                if channel:
-                    embed = discord.Embed(
-                        title="每日段位排行榜已更新",
-                        description=f"共查询 {len(players)} 位玩家\n\n🔗 [点击查看完整排行榜](https://melolrank.alonglfb.com/)",
-                        timestamp=datetime.now(UAE_TZ)
-                    )
-                    embed.set_footer(text="RankBot 自动更新（03:00 UAE）")
-                    # file = discord.File(output_file, filename=output_file)
-                    await channel.send(embed=embed)
-                    logging.info("Uploaded daily HTML to channel.")
-            except Exception:
-                logging.exception("Failed to send daily report to channel.")
+            if REPORT_CHANNEL_ID:
+                try:
+                    channel = bot.get_channel(int(REPORT_CHANNEL_ID)) or await bot.fetch_channel(int(REPORT_CHANNEL_ID))
+                    if channel:
+                        embed = discord.Embed(
+                            title="每日段位排行榜已更新[点击查看完整排行榜]",
+                            description=f"共查询 {len(players)} 位玩家",
+                            timestamp=datetime.now(UAE_TZ),
+                            url="https://melolrank.alonglfb.com/"
+                        )
+                        embed.set_footer(text="RankBot 自动更新（03:00 UAE）")
+                        await channel.send(embed=embed)
+                        logging.info("Sent daily report to channel.")
+                except Exception:
+                    logging.exception("Failed to send daily report to channel.")
+        except Exception:
+            logging.exception("Daily refresh failed")
 
         logging.info("Daily refresh finished. Sleeping 24 hours until next run.")
         await asyncio.sleep(24 * 3600)
