@@ -207,12 +207,12 @@ async def daily_refresh_task():
                 if channel:
                     embed = discord.Embed(
                         title="每日段位排行榜已更新",
-                        description=f"共查询 {len(players)} 位玩家",
+                        description=f"共查询 {len(players)} 位玩家\n\n🔗 [点击查看完整排行榜](https://melolrank.alonglfb.com/)",
                         timestamp=datetime.now(UAE_TZ)
                     )
                     embed.set_footer(text="RankBot 自动更新（03:00 UAE）")
-                    file = discord.File(output_file, filename=output_file)
-                    await channel.send(embed=embed, file=file)
+                    # file = discord.File(output_file, filename=output_file)
+                    await channel.send(embed=embed)
                     logging.info("Uploaded daily HTML to channel.")
             except Exception:
                 logging.exception("Failed to send daily report to channel.")
