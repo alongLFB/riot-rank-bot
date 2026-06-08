@@ -14,7 +14,7 @@ QUEUE = "RANKED_FLEX_SR"
 # UAE Timezone (UTC+4)
 UAE_TZ = timezone(timedelta(hours=4))
 # Number of recent matches to fetch per player
-MATCH_COUNT = 20
+MATCH_COUNT = 50
 
 def get_api_key():
     if os.path.exists(".env"):
@@ -65,30 +65,13 @@ def main():
         print("未找到 RIOT_API_KEY。")
         return
 
-    print(f"1. 正在获取 {REGION} {QUEUE} 排行榜 (王者/宗师/大师)...")
-    entries = []
-    
-    url_challenger = f"https://{REGION}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/{QUEUE}"
-    data_c = fetch_json(url_challenger, api_key)
-    if data_c and "entries" in data_c:
-        entries.extend(data_c["entries"])
-        
-    if len(entries) < 30:
-        url_gm = f"https://{REGION}.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/{QUEUE}"
-        data_gm = fetch_json(url_gm, api_key)
-        if data_gm and "entries" in data_gm:
-            entries.extend(data_gm["entries"])
-            
-    if len(entries) < 30:
-        url_m = f"https://{REGION}.api.riotgames.com/lol/league/v4/masterleagues/by-queue/{QUEUE}"
-        data_m = fetch_json(url_m, api_key)
-        if data_m and "entries" in data_m:
-            entries.extend(data_m["entries"])
-
-    if not entries:
-        print("未能获取到排行榜数据。")
+    print(f"1. 正在获取 {REGION} {QUEUE} 排行榜...")
+    url_ladder = f"https://{REGION}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/{QUEUE}"
+    ladder_data = fetch_json(url_ladder, api_key)
+    if not ladder_data:
         return
     
+    entries = ladder_data.get("entries", [])
     entries.sort(key=lambda x: x["leaguePoints"], reverse=True)
     top_30 = entries[:30]
     
