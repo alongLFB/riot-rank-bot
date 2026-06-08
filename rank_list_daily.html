@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOL排位排行榜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .stats {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .rank-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: white;
+        }
+        .CHALLENGER { background: #f4c430; }
+        .GRANDMASTER { background: #dc143c; }
+        .MASTER { background: #9b59b6; }
+        .DIAMOND { background: #3498db; }
+        .EMERALD { background: #2ecc71; }
+        .PLATINUM { background: #1abc9c; }
+        .GOLD { background: #f39c12; }
+        .SILVER { background: #95a5a6; }
+        .BRONZE { background: #cd7f32; }
+        .IRON { background: #636363; }
+        .win-rate {
+            font-weight: bold;
+        }
+        .high { color: #27ae60; }
+        .medium { color: #f39c12; }
+        .low { color: #e74c3c; }
+        .section-title {
+            color: white;
+            font-size: 1.5em;
+            margin: 20px 0 10px 0;
+        }
+        .error-section {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .error-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 LOL 排位排行榜 🏆</h1>
+
+        <div class="stats">
+            <strong>统计信息：</strong>
+            已排位: 8 | 未排位: 2 | 查询失败: 0
+        </div>
+
+        <h2 class="section-title">📊 排位玩家</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>召唤师名称</th>
+                    <th>段位</th>
+                    <th>胜场</th>
+                    <th>负场</th>
+                    <th>总场次</th>
+                    <th>胜率</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td><strong>#1</strong></td>
+                    <td>麦当劳掌门人#爱吃小鱼</td>
+                    <td>
+                        <span class="rank-badge CHALLENGER">
+                            CHALLENGER I
+                        </span>
+                        <span style="color: #666;"> (1076 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">146</td>
+                    <td style="color: #e74c3c; font-weight: bold;">89</td>
+                    <td>235</td>
+                    <td class="win-rate high">62.1%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#2</strong></td>
+                    <td>八斤核弹朝中东蠢猪嘴里疯狂轰炸#1998</td>
+                    <td>
+                        <span class="rank-badge DIAMOND">
+                            DIAMOND III
+                        </span>
+                        <span style="color: #666;"> (79 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">388</td>
+                    <td style="color: #e74c3c; font-weight: bold;">367</td>
+                    <td>755</td>
+                    <td class="win-rate medium">51.4%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#3</strong></td>
+                    <td>alongLFB#999</td>
+                    <td>
+                        <span class="rank-badge DIAMOND">
+                            DIAMOND III
+                        </span>
+                        <span style="color: #666;"> (45 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">19</td>
+                    <td style="color: #e74c3c; font-weight: bold;">11</td>
+                    <td>30</td>
+                    <td class="win-rate high">63.3%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#4</strong></td>
+                    <td>电冰箱#IRA</td>
+                    <td>
+                        <span class="rank-badge DIAMOND">
+                            DIAMOND III
+                        </span>
+                        <span style="color: #666;"> (42 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">153</td>
+                    <td style="color: #e74c3c; font-weight: bold;">134</td>
+                    <td>287</td>
+                    <td class="win-rate medium">53.3%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#5</strong></td>
+                    <td>gfyhhyt#4564</td>
+                    <td>
+                        <span class="rank-badge DIAMOND">
+                            DIAMOND IV
+                        </span>
+                        <span style="color: #666;"> (77 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">57</td>
+                    <td style="color: #e74c3c; font-weight: bold;">14</td>
+                    <td>71</td>
+                    <td class="win-rate high">80.3%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#6</strong></td>
+                    <td>黄绿霹雳双马尾#祖安花火</td>
+                    <td>
+                        <span class="rank-badge EMERALD">
+                            EMERALD IV
+                        </span>
+                        <span style="color: #666;"> (36 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">340</td>
+                    <td style="color: #e74c3c; font-weight: bold;">330</td>
+                    <td>670</td>
+                    <td class="win-rate medium">50.7%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#7</strong></td>
+                    <td>Hasaki#FG99</td>
+                    <td>
+                        <span class="rank-badge PLATINUM">
+                            PLATINUM III
+                        </span>
+                        <span style="color: #666;"> (90 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">90</td>
+                    <td style="color: #e74c3c; font-weight: bold;">85</td>
+                    <td>175</td>
+                    <td class="win-rate medium">51.4%</td>
+                </tr>
+
+                <tr>
+                    <td><strong>#8</strong></td>
+                    <td>一顺百顺#F8FQ</td>
+                    <td>
+                        <span class="rank-badge PLATINUM">
+                            PLATINUM III
+                        </span>
+                        <span style="color: #666;"> (20 LP)</span>
+                    </td>
+                    <td style="color: #27ae60; font-weight: bold;">170</td>
+                    <td style="color: #e74c3c; font-weight: bold;">164</td>
+                    <td>334</td>
+                    <td class="win-rate medium">50.9%</td>
+                </tr>
+
+            </tbody>
+        </table>
+
+        <h2 class="section-title">❓ 未排位玩家</h2>
+        <div class="error-section">
+
+            <div class="error-item">
+                first kiss#0001 - 未进行排位赛
+            </div>
+
+            <div class="error-item">
+                JETOUR#225 - 未进行排位赛
+            </div>
+</div>
+    </div>
+</body>
+</html>
