@@ -82,11 +82,21 @@ def main():
     global_play_hours = Counter()
     global_total_matches = 0
     
-    # Store detailed report
+    # Store structured data for HTML report
+    report_data = {
+        "generated_at": datetime.now(UAE_TZ).strftime('%Y-%m-%d %H:%M:%S'),
+        "global_total_matches": 0,
+        "global_play_hours": {},
+        "players": []
+    }
+    
+    # Store detailed report (TXT version)
     report_lines = []
     report_lines.append(f"========== ME Flex Top 30 玩家游戏时间统计 (UAE时间) ==========")
-    report_lines.append(f"统计生成时间: {datetime.now(UAE_TZ).strftime('%Y-%m-%d %H:%M:%S')}")
+    report_lines.append(f"统计生成时间: {report_data['generated_at']}")
     report_lines.append("=" * 65)
+
+    from html_generator import generate_report_html
 
     for idx, player in enumerate(top_30, 1):
         puuid = player.get("puuid")
@@ -101,7 +111,6 @@ def main():
         url_matches = f"https://{ROUTING}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={MATCH_COUNT}"
         match_ids = fetch_json(url_matches, api_key)
         if not match_ids:
-            # Maybe no matches played recently
             match_ids = []
             
         print(f"[{idx}/30] 正在处理玩家: {riot_id} (LP: {league_points}) - 获取了 {len(match_ids)} 场对局")
@@ -122,26 +131,39 @@ def main():
                 global_play_hours[dt.hour] += 1
                 global_total_matches += 1
                 
-        # Append player specific report
+        # Update JSON data
+        player_data = {
+            "idx": idx,
+            "riot_id": riot_id,
+            "league_points": league_points,
+            "total_matches": player_matches,
+            "play_hours": dict(player_play_hours)
+        }
+        report_data["players"].append(player_data)
+        report_data["global_total_matches"] = global_total_matches
+        report_data["global_play_hours"] = dict(global_play_hours)
+        
+        # Save HTML incrementally
+        generate_report_html(report_data)
+                
+        # Append player specific report (TXT version)
         report_lines.append(f"\n[{idx}/30] 玩家: {riot_id} | 段位分数: {league_points} LP")
         report_lines.append(f"最近对局数: {player_matches} 场")
         if player_matches > 0:
             report_lines.append("活跃时间分布:")
-            # Sort by hour or by count? Let's sort by hour
             for hour in sorted(player_play_hours.keys()):
                 count = player_play_hours[hour]
                 pct = (count / player_matches) * 100
-                bar = "█" * int(pct / 5) # Scale bar
+                bar = "█" * int(pct / 5)
                 report_lines.append(f"  {hour:02d}:00 - {hour+1:02d}:00 | {count:2d} 场 | {pct:5.1f}% {bar}")
         else:
             report_lines.append("暂无近期对局数据。")
         report_lines.append("-" * 40)
         
-        # Save incrementally so user can read partial results if it crashes
         with open("flex_play_times_report.txt", "w", encoding="utf-8") as f:
             f.write("\n".join(report_lines))
 
-    # Finally add global summary
+    # Finally add global summary (TXT version)
     report_lines.append("\n" + "=" * 65)
     report_lines.append(f"========== 总体统计汇总 (前30名总和) ==========")
     report_lines.append(f"共计分析对局数: {global_total_matches} 场")
@@ -153,11 +175,12 @@ def main():
             report_lines.append(f"  {hour:02d}:00 - {hour+1:02d}:00 | {count:4d} 场 | {pct:5.1f}% {bar}")
     report_lines.append("=" * 65)
     
-    report_content = "\n".join(report_lines)
     with open("flex_play_times_report.txt", "w", encoding="utf-8") as f:
-        f.write(report_content)
+        f.write("\n".join(report_lines))
         
-    print(f"\n✅ 所有数据处理完毕！详细报告已保存到: flex_play_times_report.txt")
+    print(f"\n✅ 所有数据处理完毕！")
+    print(f"📊 文本报告: flex_play_times_report.txt")
+    print(f"🌐 网页报告: flex_play_times_report.html")
 
 if __name__ == "__main__":
     main()
