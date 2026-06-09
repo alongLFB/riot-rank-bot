@@ -1,4 +1,6 @@
 import os
+import sys
+import argparse
 import urllib.request
 import urllib.error
 import json
@@ -60,22 +62,59 @@ def get_riot_id(puuid, api_key):
     return "UnknownPlayer"
 
 def main():
+    parser = argparse.ArgumentParser(description="Analyze ME Flex Play Times")
+    parser.add_argument("--top", type=int, default=30, help="Number of top players to analyze")
+    args = parser.parse_args()
+    target_top = args.top
+
     api_key = get_api_key()
     if not api_key:
         print("未找到 RIOT_API_KEY。")
         return
 
-    print(f"1. 正在获取 {REGION} {QUEUE} 排行榜...")
-    url_ladder = f"https://{REGION}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/{QUEUE}"
-    ladder_data = fetch_json(url_ladder, api_key)
-    if not ladder_data:
+    print(f"1. 正在获取 {REGION} {QUEUE} 排行榜 (目标前 {target_top} 名)...")
+    entries = []
+    
+    url_challenger = f"https://{REGION}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/{QUEUE}"
+    data_c = fetch_json(url_challenger, api_key)
+    if data_c and "entries" in data_c:
+        entries.extend(data_c["entries"])
+        
+    if len(entries) < target_top:
+        url_gm = f"https://{REGION}.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/{QUEUE}"
+        data_gm = fetch_json(url_gm, api_key)
+        if data_gm and "entries" in data_gm:
+            entries.extend(data_gm["entries"])
+            
+    if len(entries) < target_top:
+        url_m = f"https://{REGION}.api.riotgames.com/lol/league/v4/masterleagues/by-queue/{QUEUE}"
+        data_m = fetch_json(url_m, api_key)
+        if data_m and "entries" in data_m:
+            entries.extend(data_m["entries"])
+
+    # If apex tiers still don't have enough players, query Diamond/Emerald via league-exp API
+    fallback_tiers = [
+        ("DIAMOND", "I"), ("DIAMOND", "II"), ("DIAMOND", "III"), ("DIAMOND", "IV"),
+        ("EMERALD", "I"), ("EMERALD", "II"), ("EMERALD", "III"), ("EMERALD", "IV")
+    ]
+    
+    for tier, div in fallback_tiers:
+        if len(entries) >= target_top:
+            break
+        print(f"   Apex 段位人数不足，继续获取 {tier} {div}...")
+        url_exp = f"https://{REGION}.api.riotgames.com/lol/league-exp/v4/entries/{QUEUE}/{tier}/{div}?page=1"
+        data_exp = fetch_json(url_exp, api_key)
+        if data_exp:
+            data_exp.sort(key=lambda x: x.get("leaguePoints", 0), reverse=True)
+            entries.extend(data_exp)
+
+    if not entries:
+        print("未能获取到排行榜数据。")
         return
     
-    entries = ladder_data.get("entries", [])
-    entries.sort(key=lambda x: x["leaguePoints"], reverse=True)
-    top_30 = entries[:30]
+    top_30 = entries[:target_top]
     
-    print(f"成功获取前30名玩家。正在分析他们的近期对局...")
+    print(f"成功获取前{len(top_30)}名玩家。正在分析他们的近期对局...")
     print("注意：受限于 Riot 开发密钥的频率限制（每 2 分钟 100 次请求），抓取对局数据可能需要几分钟，请耐心等待。")
     
     # Store global play hours
@@ -113,7 +152,7 @@ def main():
         if not match_ids:
             match_ids = []
             
-        print(f"[{idx}/30] 正在处理玩家: {riot_id} (LP: {league_points}) - 获取了 {len(match_ids)} 场对局")
+        print(f"[{idx}/{len(top_30)}] 正在处理玩家: {riot_id} (LP: {league_points}) - 获取了 {len(match_ids)} 场对局")
         
         player_play_hours = Counter()
         player_matches = 0
@@ -134,6 +173,7 @@ def main():
         # Update JSON data
         player_data = {
             "idx": idx,
+            "total_top": len(top_30),
             "riot_id": riot_id,
             "league_points": league_points,
             "total_matches": player_matches,
@@ -147,7 +187,7 @@ def main():
         generate_report_html(report_data)
                 
         # Append player specific report (TXT version)
-        report_lines.append(f"\n[{idx}/30] 玩家: {riot_id} | 段位分数: {league_points} LP")
+        report_lines.append(f"\n[{idx}/{len(top_30)}] 玩家: {riot_id} | 段位分数: {league_points} LP")
         report_lines.append(f"最近对局数: {player_matches} 场")
         if player_matches > 0:
             report_lines.append("活跃时间分布:")
@@ -165,7 +205,7 @@ def main():
 
     # Finally add global summary (TXT version)
     report_lines.append("\n" + "=" * 65)
-    report_lines.append(f"========== 总体统计汇总 (前30名总和) ==========")
+    report_lines.append(f"========== 总体统计汇总 (前{len(top_30)}名总和) ==========")
     report_lines.append(f"共计分析对局数: {global_total_matches} 场")
     if global_total_matches > 0:
         for hour in range(24):

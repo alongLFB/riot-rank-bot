@@ -244,20 +244,42 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 导出时的样式调整 */
+        /* 导出时的样式调整 (强制浅色高对比度主题) */
         .exporting .actions {
             display: none !important;
         }
         .exporting {
-            background: #0f172a !important;
-            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            padding: 20px !important;
+            background-image: none !important;
         }
         .exporting .glass-panel {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
             box-shadow: none !important;
-            border: none !important;
             border-radius: 0 !important;
-            margin-bottom: 0 !important;
+            margin-bottom: 2rem !important;
             break-inside: avoid;
+        }
+        .exporting .text-muted, .exporting th, .exporting .stat-label, .exporting .header p {
+            color: #475569 !important;
+        }
+        .exporting .player-name, .exporting .stat-value, .exporting .header h1, .exporting td, .exporting p {
+            background: none !important;
+            -webkit-text-fill-color: #0f172a !important;
+            color: #0f172a !important;
+        }
+        .exporting .player-lp {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        .exporting td {
+            border-bottom-color: #e2e8f0 !important;
+        }
+        .exporting th {
+            background: #f8fafc !important;
         }
     </style>
 </head>
@@ -280,7 +302,7 @@
         </div>
 
         <div class="glass-panel">
-            <h2 class="section-title">总体统计汇总 (前30名)</h2>
+            <h2 class="section-title">总体统计汇总</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="global-matches">0</div>
@@ -313,7 +335,7 @@
 
     <script>
         // 这是占位符，Python 会用真实数据替换这里
-        const REPORT_DATA = {"generated_at": "2026-06-09 10:22:20", "global_total_matches": 100, "global_play_hours": {"1": 13, "0": 10, "23": 10, "3": 5, "22": 8, "20": 5, "15": 6, "2": 8, "19": 5, "18": 2, "16": 4, "4": 2, "17": 4, "21": 6, "9": 1, "14": 3, "13": 2, "5": 3, "7": 2, "6": 1}, "players": [{"idx": 1, "riot_id": "فيم أهري#LGBT", "league_points": 1337, "total_matches": 50, "play_hours": {"1": 9, "0": 6, "23": 4, "3": 3, "22": 5, "20": 2, "15": 3, "2": 5, "19": 3, "18": 1, "16": 2, "4": 1, "17": 1, "21": 4, "9": 1}}, {"idx": 2, "riot_id": "Hashim#SA1", "league_points": 538, "total_matches": 50, "play_hours": {"1": 4, "0": 4, "23": 6, "22": 3, "20": 3, "14": 3, "13": 2, "3": 2, "2": 3, "19": 2, "17": 3, "16": 2, "15": 3, "5": 3, "21": 2, "7": 2, "6": 1, "18": 1, "4": 1}}]};
+        const REPORT_DATA = {"generated_at": "2026-06-09 10:39:28", "global_total_matches": 1500, "global_play_hours": {"1": 142, "0": 136, "23": 183, "3": 41, "22": 161, "20": 94, "15": 45, "2": 83, "19": 85, "18": 47, "16": 48, "4": 38, "17": 56, "21": 131, "9": 16, "14": 45, "13": 24, "5": 29, "7": 16, "6": 15, "10": 18, "8": 8, "12": 14, "11": 25}, "players": [{"idx": 1, "total_top": 30, "riot_id": "فيم أهري#LGBT", "league_points": 1337, "total_matches": 50, "play_hours": {"1": 9, "0": 6, "23": 4, "3": 3, "22": 5, "20": 2, "15": 3, "2": 5, "19": 3, "18": 1, "16": 2, "4": 1, "17": 1, "21": 4, "9": 1}}, {"idx": 2, "total_top": 30, "riot_id": "Hashim#SA1", "league_points": 538, "total_matches": 50, "play_hours": {"1": 4, "0": 4, "23": 6, "22": 3, "20": 3, "14": 3, "13": 2, "3": 2, "2": 3, "19": 2, "17": 3, "16": 2, "15": 3, "5": 3, "21": 2, "7": 2, "6": 1, "18": 1, "4": 1}}, {"idx": 3, "total_top": 30, "riot_id": "Calelvanilla#0945", "league_points": 297, "total_matches": 50, "play_hours": {"23": 7, "22": 8, "21": 11, "19": 4, "18": 2, "1": 6, "20": 4, "2": 1, "0": 7}}, {"idx": 4, "total_top": 30, "riot_id": "Magic鸡把#4476", "league_points": 189, "total_matches": 50, "play_hours": {"9": 2, "6": 3, "5": 5, "4": 8, "3": 6, "0": 2, "23": 7, "22": 4, "2": 5, "10": 1, "8": 2, "21": 1, "1": 4}}, {"idx": 5, "total_top": 30, "riot_id": "中东小霸王#8253", "league_points": 185, "total_matches": 50, "play_hours": {"0": 4, "23": 15, "22": 15, "21": 6, "1": 3, "17": 1, "20": 4, "15": 1, "14": 1}}, {"idx": 6, "total_top": 30, "riot_id": "Mira#bde", "league_points": 173, "total_matches": 50, "play_hours": {"1": 3, "0": 6, "23": 6, "22": 5, "21": 6, "20": 5, "17": 3, "16": 2, "15": 1, "14": 1, "19": 6, "18": 4, "2": 2}}, {"idx": 7, "total_top": 30, "riot_id": "Badwoman#KS0MK", "league_points": 155, "total_matches": 50, "play_hours": {"0": 8, "23": 9, "22": 7, "21": 4, "1": 9, "3": 1, "2": 4, "20": 2, "14": 1, "16": 1, "12": 1, "11": 2, "10": 1}}, {"idx": 8, "total_top": 30, "riot_id": "StrawberryBanana#3509", "league_points": 153, "total_matches": 50, "play_hours": {"1": 6, "0": 8, "23": 7, "22": 8, "19": 4, "21": 6, "15": 1, "14": 1, "20": 4, "2": 2, "3": 1, "16": 2}}, {"idx": 9, "total_top": 30, "riot_id": "A41i#SUPP", "league_points": 151, "total_matches": 50, "play_hours": {"1": 10, "0": 8, "23": 9, "22": 4, "20": 3, "2": 5, "19": 5, "18": 5, "3": 1}}, {"idx": 10, "total_top": 30, "riot_id": "ZEX#Zeshy", "league_points": 131, "total_matches": 50, "play_hours": {"21": 7, "19": 3, "23": 5, "22": 8, "20": 8, "2": 2, "1": 4, "0": 2, "17": 4, "4": 1, "3": 1, "16": 3, "15": 1, "14": 1}}, {"idx": 11, "total_top": 30, "riot_id": "Med Student#1999", "league_points": 119, "total_matches": 50, "play_hours": {"2": 5, "1": 7, "0": 6, "23": 6, "22": 2, "21": 3, "20": 1, "19": 2, "18": 3, "4": 4, "3": 5, "5": 1, "17": 1, "14": 1, "13": 1, "12": 1, "11": 1}}, {"idx": 12, "total_top": 30, "riot_id": "NoBB MIDcarry#9790", "league_points": 117, "total_matches": 50, "play_hours": {"2": 4, "1": 6, "16": 2, "0": 4, "23": 6, "22": 5, "21": 5, "18": 2, "17": 5, "6": 1, "3": 2, "20": 3, "19": 1, "15": 2, "14": 2}}, {"idx": 13, "total_top": 30, "riot_id": "XINDAY#5791", "league_points": 104, "total_matches": 50, "play_hours": {"16": 8, "15": 4, "14": 2, "11": 4, "10": 2, "1": 4, "0": 4, "23": 4, "22": 4, "18": 1, "17": 5, "13": 1, "21": 3, "20": 1, "19": 3}}, {"idx": 14, "total_top": 30, "riot_id": "Knight1#666", "league_points": 95, "total_matches": 50, "play_hours": {"19": 6, "16": 3, "14": 5, "13": 6, "0": 1, "23": 3, "22": 4, "15": 4, "21": 3, "1": 2, "11": 2, "10": 3, "20": 4, "17": 1, "12": 2, "9": 1}}, {"idx": 15, "total_top": 30, "riot_id": "中东占地急着#Dylan", "league_points": 95, "total_matches": 50, "play_hours": {"23": 5, "11": 3, "2": 1, "1": 1, "0": 1, "22": 5, "5": 6, "4": 3, "17": 2, "16": 1, "15": 1, "14": 2, "8": 4, "9": 3, "7": 3, "6": 1, "3": 2, "13": 1, "12": 1, "10": 1, "21": 1, "20": 1, "19": 1}}, {"idx": 16, "total_top": 30, "riot_id": "jack#66888", "league_points": 92, "total_matches": 50, "play_hours": {"2": 7, "1": 9, "23": 5, "22": 4, "4": 4, "3": 4, "6": 1, "5": 2, "21": 5, "0": 4, "19": 2, "20": 1, "9": 1, "7": 1}}, {"idx": 17, "total_top": 30, "riot_id": "الصياد القديم#古き女狩人", "league_points": 82, "total_matches": 50, "play_hours": {"1": 1, "0": 3, "23": 4, "21": 6, "19": 8, "18": 4, "22": 4, "20": 4, "17": 6, "14": 5, "11": 1, "15": 3, "16": 1}}, {"idx": 18, "total_top": 30, "riot_id": "900#0000", "league_points": 61, "total_matches": 50, "play_hours": {"3": 4, "2": 5, "19": 1, "0": 5, "23": 5, "22": 4, "21": 3, "7": 2, "6": 1, "5": 1, "4": 1, "12": 3, "9": 2, "1": 3, "18": 2, "17": 2, "16": 2, "11": 2, "10": 2}}, {"idx": 19, "total_top": 30, "riot_id": "还是想做她の狗#那李白不白", "league_points": 60, "total_matches": 50, "play_hours": {"0": 10, "23": 9, "22": 9, "20": 5, "18": 1, "1": 2, "21": 8, "3": 2, "2": 2, "17": 1, "19": 1}}, {"idx": 20, "total_top": 30, "riot_id": "Tiny Screw#TSC", "league_points": 53, "total_matches": 50, "play_hours": {"0": 7, "23": 10, "22": 7, "21": 2, "2": 3, "1": 11, "20": 1, "18": 1, "19": 1, "6": 2, "5": 3, "4": 2}}, {"idx": 21, "total_top": 30, "riot_id": "Low IQ High BMI#RIP", "league_points": 47, "total_matches": 50, "play_hours": {"5": 2, "4": 5, "3": 2, "2": 1, "23": 4, "22": 5, "21": 3, "20": 5, "19": 3, "18": 3, "17": 2, "16": 3, "15": 3, "14": 3, "13": 3, "0": 3}}, {"idx": 22, "total_top": 30, "riot_id": "meowxmeow#6371", "league_points": 45, "total_matches": 50, "play_hours": {"0": 6, "23": 8, "5": 2, "4": 1, "3": 1, "2": 4, "22": 6, "21": 3, "20": 3, "19": 1, "17": 2, "1": 12, "18": 1}}, {"idx": 23, "total_top": 30, "riot_id": "Cz Silent#czsl", "league_points": 45, "total_matches": 50, "play_hours": {"16": 1, "0": 5, "23": 6, "21": 4, "20": 5, "19": 5, "22": 5, "17": 3, "15": 2, "2": 4, "1": 9, "18": 1}}, {"idx": 24, "total_top": 30, "riot_id": "Hu Xiu Qiang Wei#zed", "league_points": 25, "total_matches": 50, "play_hours": {"19": 4, "22": 7, "21": 8, "17": 4, "16": 2, "18": 6, "20": 1, "15": 3, "14": 2, "23": 5, "0": 4, "13": 2, "1": 2}}, {"idx": 25, "total_top": 30, "riot_id": "محمود#111", "league_points": 24, "total_matches": 50, "play_hours": {"15": 4, "12": 3, "11": 1, "20": 2, "14": 2, "13": 2, "0": 3, "23": 7, "21": 5, "19": 2, "2": 3, "17": 2, "16": 2, "9": 3, "10": 1, "5": 2, "4": 2, "3": 1, "22": 2, "1": 1}}, {"idx": 26, "total_top": 30, "riot_id": "حسوون 艾#diff", "league_points": 22, "total_matches": 50, "play_hours": {"18": 2, "17": 2, "15": 2, "23": 4, "22": 5, "21": 4, "20": 6, "19": 1, "16": 2, "14": 2, "11": 2, "10": 2, "9": 1, "2": 2, "4": 1, "3": 1, "13": 1, "8": 1, "7": 2, "6": 2, "5": 1, "0": 4}}, {"idx": 27, "total_top": 30, "riot_id": "Vayne#Dinar", "league_points": 21, "total_matches": 50, "play_hours": {"20": 6, "21": 4, "19": 4, "18": 3, "17": 4, "16": 2, "15": 3, "14": 3, "13": 3, "11": 2, "10": 2, "9": 1, "6": 1, "22": 2, "2": 3, "1": 3, "0": 2, "23": 2}}, {"idx": 28, "total_top": 30, "riot_id": "SonOfZoldyck#997", "league_points": 14, "total_matches": 50, "play_hours": {"23": 5, "22": 7, "21": 7, "20": 5, "19": 7, "18": 2, "16": 1, "15": 2, "14": 1, "1": 4, "0": 4, "2": 1, "12": 1, "11": 1, "4": 1, "3": 1}}, {"idx": 29, "total_top": 30, "riot_id": "Cola Ice#JDI", "league_points": 13, "total_matches": 50, "play_hours": {"23": 8, "22": 7, "21": 4, "20": 4, "19": 3, "17": 1, "16": 2, "14": 2, "2": 8, "1": 6, "0": 5}}, {"idx": 30, "total_top": 30, "riot_id": "الانتسلل#3mk", "league_points": 12, "total_matches": 50, "play_hours": {"16": 4, "14": 5, "13": 2, "7": 6, "18": 2, "11": 4, "10": 3, "23": 2, "15": 2, "12": 2, "9": 1, "5": 1, "8": 1, "21": 3, "20": 1, "19": 2, "17": 1, "6": 2, "4": 3, "2": 1, "1": 1, "3": 1}}]};
 
         function renderData() {
             if (!REPORT_DATA || !REPORT_DATA.players) return;
@@ -390,7 +412,7 @@
 
                 panel.innerHTML = `
                     <div class="player-header">
-                        <div class="player-name">[${p.idx}/30] ${p.riot_id}</div>
+                        <div class="player-name">[${p.idx}/${p.total_top || 30}] ${p.riot_id}</div>
                         <div class="player-lp">${p.league_points} LP</div>
                     </div>
                     <p style="color: var(--text-muted); margin-bottom: 1rem;">近期分析对局：<span style="color: #fff; font-weight: 600;">${p.total_matches}</span> 场</p>
@@ -422,7 +444,7 @@
             
             html2canvas(content, {
                 scale: 2,
-                backgroundColor: '#0f172a',
+                backgroundColor: '#ffffff',
                 useCORS: true,
                 windowWidth: 1200
             }).then(canvas => {
@@ -445,7 +467,7 @@
                 margin:       10,
                 filename:     'ME_Flex_Report.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, backgroundColor: '#0f172a', useCORS: true },
+                html2canvas:  { scale: 2, backgroundColor: '#ffffff', useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 

@@ -246,20 +246,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 导出时的样式调整 */
+        /* 导出时的样式调整 (强制浅色高对比度主题) */
         .exporting .actions {
             display: none !important;
         }
         .exporting {
-            background: #0f172a !important;
-            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            padding: 20px !important;
+            background-image: none !important;
         }
         .exporting .glass-panel {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
             box-shadow: none !important;
-            border: none !important;
             border-radius: 0 !important;
-            margin-bottom: 0 !important;
+            margin-bottom: 2rem !important;
             break-inside: avoid;
+        }
+        .exporting .text-muted, .exporting th, .exporting .stat-label, .exporting .header p {
+            color: #475569 !important;
+        }
+        .exporting .player-name, .exporting .stat-value, .exporting .header h1, .exporting td, .exporting p {
+            background: none !important;
+            -webkit-text-fill-color: #0f172a !important;
+            color: #0f172a !important;
+        }
+        .exporting .player-lp {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        .exporting td {
+            border-bottom-color: #e2e8f0 !important;
+        }
+        .exporting th {
+            background: #f8fafc !important;
         }
     </style>
 </head>
@@ -282,7 +304,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="glass-panel">
-            <h2 class="section-title">总体统计汇总 (前30名)</h2>
+            <h2 class="section-title">总体统计汇总</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="global-matches">0</div>
@@ -392,7 +414,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 panel.innerHTML = `
                     <div class="player-header">
-                        <div class="player-name">[${p.idx}/30] ${p.riot_id}</div>
+                        <div class="player-name">[${p.idx}/${p.total_top || 30}] ${p.riot_id}</div>
                         <div class="player-lp">${p.league_points} LP</div>
                     </div>
                     <p style="color: var(--text-muted); margin-bottom: 1rem;">近期分析对局：<span style="color: #fff; font-weight: 600;">${p.total_matches}</span> 场</p>
@@ -424,7 +446,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             html2canvas(content, {
                 scale: 2,
-                backgroundColor: '#0f172a',
+                backgroundColor: '#ffffff',
                 useCORS: true,
                 windowWidth: 1200
             }).then(canvas => {
@@ -447,7 +469,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 margin:       10,
                 filename:     'ME_Flex_Report.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, backgroundColor: '#0f172a', useCORS: true },
+                html2canvas:  { scale: 2, backgroundColor: '#ffffff', useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
