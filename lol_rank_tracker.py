@@ -219,8 +219,24 @@ def get_player_history(server: str, game_name: str, tag_line: str) -> Dict:
                 pos_map = {"TOP": "上单", "JUNGLE": "打野", "MIDDLE": "中单", "BOTTOM": "AD", "UTILITY": "辅助"}
                 pos_cn = pos_map.get(position, "未知") if position else "未知"
                 
-                # 判断游戏模式
-                game_mode = info.get("gameMode", "CLASSIC")
+                # 判断游戏模式 (通过 queueId)
+                queue_id = info.get("queueId", 0)
+                queue_map = {
+                    420: "单双",
+                    440: "灵活",
+                    400: "匹配",
+                    430: "盲选",
+                    490: "快速",
+                    450: "大乱斗",
+                    700: "冠军杯",
+                    900: "无限火力",
+                    1700: "斗魂",
+                    1900: "无限火力"
+                }
+                game_mode_cn = queue_map.get(queue_id)
+                if not game_mode_cn:
+                    raw_mode = info.get("gameMode", "未知")
+                    game_mode_cn = "匹配" if raw_mode == "CLASSIC" else raw_mode
                 
                 # 时间与时长
                 game_creation = info.get("gameCreation", 0)
@@ -233,7 +249,7 @@ def get_player_history(server: str, game_name: str, tag_line: str) -> Dict:
                     "kills": kills,
                     "deaths": deaths,
                     "assists": assists,
-                    "mode": game_mode,
+                    "mode": game_mode_cn,
                     "damage": damage,
                     "cs": cs,
                     "vision": vision,

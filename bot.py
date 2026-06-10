@@ -294,8 +294,11 @@ async def history_command(interaction: discord.Interaction, server: app_commands
         dmg_str = f"{dmg/1000:.1f}k" if dmg >= 1000 else str(dmg)
         cs = m.get('cs', 0)
         
+        # 游戏模式
+        mode = m.get('mode', '未知')
+        
         # 组装文本
-        line = f"`{i:02d}.` `[{date_str}]` {status_emoji} | **{champ}**({pos}) | ⚔️ `{kda}` | ⏱️ `{dur_str}` | 🗡️ {dmg_str} | 👾 {cs}刀"
+        line = f"`{i:02d}.` `[{date_str} {mode}]` {status_emoji} | **{champ}**({pos}) | ⚔️ `{kda}` | ⏱️ `{dur_str}` | 🗡️ {dmg_str} | 👾 {cs}刀"
         history_lines.append(line)
         
     # Embed description max length is 4096. 20 lines will easily fit.
