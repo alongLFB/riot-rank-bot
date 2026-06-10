@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  riot_rank_bot:
+    build: .
+    container_name: riot_rank_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # 将当前目录挂载到容器内，这样容器产生的 HTML 报表和 JSON 数据能直接写到宿主机上
+      - ./:/app
+    command: python bot.py
