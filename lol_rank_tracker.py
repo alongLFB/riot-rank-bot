@@ -44,43 +44,72 @@ def parse_riot_id(line: str) -> tuple:
         return parts[0].strip(), parts[1].strip()
     return None, None
 
-def get_player_rank(game_name: str, tag_line: str, region: Region = Region.ME) -> Dict:
+def get_player_rank(game_name: str, tag_line: str, region_str: str = "me1") -> Dict:
     """获取玩家排位信息"""
     try:
-        # 获取账号信息
-        account = api.account.by_riot_id(Continent.ASIA, game_name, tag_line)
-
+        # 1. 优先使用 europe 路由获取 PUUID，因为 ME1 等服务器的 Riot ID 大都在 europe 路由
+        account_url = f"https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{urllib.parse.quote(game_name)}/{urllib.parse.quote(tag_line)}"
+        account_data = _fetch_json_sync(account_url, RIOT_API_KEY)
+        
+        # 如果 europe 找不到，尝试 asia
+        if not account_data or "puuid" not in account_data:
+            account_url = f"https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{urllib.parse.quote(game_name)}/{urllib.parse.quote(tag_line)}"
+            account_data = _fetch_json_sync(account_url, RIOT_API_KEY)
+            
+        if not account_data or "puuid" not in account_data:
+            return {
+                'game_name': game_name,
+                'tag_line': tag_line,
+                'status': 'not_found'
+            }
+            
+        puuid = account_data["puuid"]
+        
         # 稍作延迟避免API限制
         time.sleep(0.5)
 
-        # 获取排位信息
-        league_entries = api.league.by_puuid(region, account.puuid)
+        # 2. 根据 PUUID 获取排位信息
+        league_url = f"https://{region_str}.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}"
+        league_entries = _fetch_json_sync(league_url, RIOT_API_KEY)
+
+        if league_entries is None:
+             return {
+                'game_name': game_name,
+                'tag_line': tag_line,
+                'status': 'error',
+                'error': '获取段位数据失败'
+            }
 
         # 查找单双排信息
         solo_queue = None
         for entry in league_entries:
-            if entry.queue_type == 'RANKED_SOLO_5x5':
+            if entry.get("queueType") == 'RANKED_SOLO_5x5':
                 solo_queue = entry
                 break
 
         if solo_queue:
-            total_games = solo_queue.wins + solo_queue.losses
-            win_rate = (solo_queue.wins / total_games * 100) if total_games > 0 else 0
+            wins = solo_queue.get("wins", 0)
+            losses = solo_queue.get("losses", 0)
+            total_games = wins + losses
+            win_rate = (wins / total_games * 100) if total_games > 0 else 0
+            
+            tier = solo_queue.get("tier", "UNRANKED")
+            rank = solo_queue.get("rank", "I")
+            lp = solo_queue.get("leaguePoints", 0)
 
             # 计算排序权重
-            tier_score = TIER_WEIGHT.get(solo_queue.tier, 0) * 1000
-            rank_score = RANK_WEIGHT.get(solo_queue.rank, 0) * 100
-            lp_score = solo_queue.league_points
-            total_score = tier_score + rank_score + lp_score
+            tier_score = TIER_WEIGHT.get(tier, 0) * 1000
+            rank_score = RANK_WEIGHT.get(rank, 0) * 100
+            total_score = tier_score + rank_score + lp
 
             return {
                 'game_name': game_name,
                 'tag_line': tag_line,
-                'tier': solo_queue.tier,
-                'rank': solo_queue.rank,
-                'lp': solo_queue.league_points,
-                'wins': solo_queue.wins,
-                'losses': solo_queue.losses,
+                'tier': tier,
+                'rank': rank,
+                'lp': lp,
+                'wins': wins,
+                'losses': losses,
                 'win_rate': win_rate,
                 'total_score': total_score,
                 'status': 'success'
@@ -93,18 +122,13 @@ def get_player_rank(game_name: str, tag_line: str, region: Region = Region.ME) -
             }
 
     except Exception as e:
-        # 统一处理所有异常
         error_msg = str(e)
-
-        # 判断是否为未找到玩家的错误
         if '404' in error_msg or 'not found' in error_msg.lower() or 'Data not found' in error_msg:
             return {
                 'game_name': game_name,
                 'tag_line': tag_line,
                 'status': 'not_found'
             }
-
-        # 其他错误
         return {
             'game_name': game_name,
             'tag_line': tag_line,
