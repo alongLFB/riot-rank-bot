@@ -112,6 +112,97 @@ def get_player_rank(game_name: str, tag_line: str, region: Region = Region.ME) -
             'error': error_msg
         }
 
+import urllib.request
+import urllib.error
+import urllib.parse
+import asyncio
+
+def _fetch_json_sync(url, api_key):
+    headers = {"X-Riot-Token": api_key, "User-Agent": "Mozilla/5.0"}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as res:
+            return json.loads(res.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            retry_after = int(e.headers.get("Retry-After", 10))
+            time.sleep(retry_after)
+            return _fetch_json_sync(url, api_key)
+        return None
+    except Exception:
+        return None
+
+def get_player_history(server: str, game_name: str, tag_line: str) -> Dict:
+    """获取玩家最近20场对局历史"""
+    try:
+        server = server.upper()
+        # 1. 映射到平台和路由区域
+        if server == "ME1":
+            platform = "me1"
+            routing = "europe"
+        elif server == "EUW1":
+            platform = "euw1"
+            routing = "europe"
+        elif server == "EUN1":
+            platform = "eun1"
+            routing = "europe"
+        else:
+            return {"status": "error", "error": "不支持的服务器"}
+
+        # 2. 获取 PUUID (通过 account-v1)
+        # account-v1 is available on americas, asia, europe, esports
+        account_url = f"https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{urllib.parse.quote(game_name)}/{urllib.parse.quote(tag_line)}"
+        account_data = _fetch_json_sync(account_url, RIOT_API_KEY)
+        
+        if not account_data or "puuid" not in account_data:
+            return {"status": "not_found", "error": "未找到玩家"}
+            
+        puuid = account_data["puuid"]
+        
+        # 3. 获取最近 20 场对局 IDs (Match-V5)
+        match_ids_url = f"https://{routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=20"
+        match_ids = _fetch_json_sync(match_ids_url, RIOT_API_KEY)
+        
+        if not match_ids:
+            return {"status": "success", "matches": []}
+            
+        # 4. 依次获取对局详细信息
+        matches_info = []
+        for match_id in match_ids:
+            match_url = f"https://{routing}.api.riotgames.com/lol/match/v5/matches/{match_id}"
+            match_data = _fetch_json_sync(match_url, RIOT_API_KEY)
+            if not match_data:
+                continue
+                
+            info = match_data.get("info", {})
+            participants = info.get("participants", [])
+            player_p = next((p for p in participants if p["puuid"] == puuid), None)
+            
+            if player_p:
+                win = player_p.get("win", False)
+                champ = player_p.get("championName", "Unknown")
+                kills = player_p.get("kills", 0)
+                deaths = player_p.get("deaths", 0)
+                assists = player_p.get("assists", 0)
+                
+                # 判断游戏模式
+                game_mode = info.get("gameMode", "CLASSIC")
+                
+                matches_info.append({
+                    "match_id": match_id,
+                    "win": win,
+                    "champion": champ,
+                    "kills": kills,
+                    "deaths": deaths,
+                    "assists": assists,
+                    "mode": game_mode
+                })
+                
+        return {"status": "success", "matches": matches_info}
+        
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
 def save_data_to_json(players_data: List[Dict], filename: str = 'player_data.json'):
     """保存数据到JSON文件"""
     with open(filename, 'w', encoding='utf-8') as f:

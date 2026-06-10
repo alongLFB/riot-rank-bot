@@ -1,0 +1,37 @@
+# 环境变量与密钥 (绝密，绝对不能上传)
+.env
+riot.txt
+
+# 缓存与编译产生的文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 虚拟环境目录
+venv/
+.venv/
+env/
+.env_dir/
+
+# 编辑器与操作系统产生的文件
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 脚本运行产生的报表与缓存数据文件
+player_data.json
+lol_ranking.html
+flex_play_times_report.txt
+flex_play_times_report.html
+rank_list_daily.html
+
+# 用户追踪列表 (包含用户隐私 ID 列表)
+id_list.txt
+id_list2.txt
+
+# 临时测试脚本
+test_*.py

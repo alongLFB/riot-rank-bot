@@ -261,7 +261,10 @@
             box-shadow: none !important;
             border-radius: 0 !important;
             margin-bottom: 2rem !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
             break-inside: avoid;
+            page-break-inside: avoid;
         }
         .exporting .text-muted, .exporting th, .exporting .stat-label, .exporting .header p {
             color: #475569 !important;
@@ -280,6 +283,13 @@
         }
         .exporting th {
             background: #f8fafc !important;
+            position: static !important; /* Fix sticky header glitch in html2canvas */
+        }
+        .exporting .progress-bar {
+            background: #3b82f6 !important; /* Remove gradient */
+        }
+        .exporting .progress-wrapper {
+            background: #e2e8f0 !important;
         }
     </style>
 </head>
@@ -442,41 +452,46 @@
             const content = document.getElementById('report-content');
             document.body.classList.add('exporting');
             
-            html2canvas(content, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                useCORS: true,
-                windowWidth: 1200
-            }).then(canvas => {
-                document.body.classList.remove('exporting');
-                const link = document.createElement('a');
-                link.download = 'ME_Flex_Report.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(err => {
-                document.body.classList.remove('exporting');
-                alert("导出图片失败: " + err);
-            });
+            setTimeout(() => {
+                html2canvas(content, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    windowWidth: 1200
+                }).then(canvas => {
+                    document.body.classList.remove('exporting');
+                    const link = document.createElement('a');
+                    link.download = 'ME_Flex_Report.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }).catch(err => {
+                    document.body.classList.remove('exporting');
+                    alert("导出图片失败: " + err);
+                });
+            }, 150);
         }
 
         function exportPDF() {
             const element = document.getElementById('report-content');
             document.body.classList.add('exporting');
             
-            const opt = {
-                margin:       10,
-                filename:     'ME_Flex_Report.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, backgroundColor: '#ffffff', useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            setTimeout(() => {
+                const opt = {
+                    margin:       10,
+                    filename:     'ME_Flex_Report.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: 1200 },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+                };
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                document.body.classList.remove('exporting');
-            }).catch(err => {
-                document.body.classList.remove('exporting');
-                alert("导出 PDF 失败: " + err);
-            });
+                html2pdf().set(opt).from(element).save().then(() => {
+                    document.body.classList.remove('exporting');
+                }).catch(err => {
+                    document.body.classList.remove('exporting');
+                    alert("导出 PDF 失败: " + err);
+                });
+            }, 150);
         }
 
         // 初始化

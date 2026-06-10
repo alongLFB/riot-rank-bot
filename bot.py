@@ -212,6 +212,76 @@ async def refresh_command(interaction: discord.Interaction):
         await interaction.followup.send(f"❌ 刷新失败：{e}")
 
 
+# /history 历史战绩命令
+@tree.command(name="history", description="查询玩家最近20场对局记录")
+@app_commands.describe(server="选择服务器", game_id="召唤师名称（如: Faker#KR1）")
+@app_commands.choices(server=[
+    app_commands.Choice(name="中东服 (ME1)", value="ME1"),
+    app_commands.Choice(name="欧服西区 (EUW1)", value="EUW1"),
+    app_commands.Choice(name="欧服东北 (EUN1)", value="EUN1")
+])
+@app_commands.autocomplete(game_id=autocomplete_ids)
+async def history_command(interaction: discord.Interaction, server: app_commands.Choice[str], game_id: str):
+    await interaction.response.defer()
+    
+    if '#' not in game_id:
+        await interaction.followup.send("❌ 格式错误！正确格式示例：`Faker#KR1`")
+        return
+
+    name, tag = parse_riot_id(game_id)
+    server_val = server.value
+    
+    await interaction.followup.send(f"🔍 正在努力从 {server.name} 拉取 **{game_id}** 的最近 20 场对局数据，请稍候...")
+    
+    # 动态导入防止循环依赖或前面未导入
+    from lol_rank_tracker import get_player_history
+    
+    try:
+        data = await asyncio.to_thread(get_player_history, server_val, name, tag)
+    except Exception as e:
+        logging.exception("战绩查询异常")
+        await interaction.followup.send(f"❌ 查询失败：{e}")
+        return
+
+    if data.get("status") == "not_found":
+        await interaction.followup.send(f"❌ 未找到玩家：**{game_id}** (在服务器 {server_val})")
+        return
+    elif data.get("status") == "error":
+        await interaction.followup.send(f"❌ 查询出错：{data.get('error', '未知错误')}")
+        return
+        
+    matches = data.get("matches", [])
+    if not matches:
+        await interaction.followup.send(f"⚠️ 玩家 **{game_id}** 近期没有对局记录。")
+        return
+
+    # 构建富文本消息
+    embed = discord.Embed(title=f"📜 {game_id} 的近期战绩 ({server.name})", color=0x3498db)
+    
+    # 因为单挑 embed field 限制，或者为了美观，我们将对局合并到文本描述中
+    wins_count = sum(1 for m in matches if m['win'])
+    total_count = len(matches)
+    win_rate = (wins_count / total_count) * 100
+    
+    embed.description = f"**最近 {total_count} 场胜率: {win_rate:.1f}% ({wins_count}胜 / {total_count - wins_count}负)**\n\n"
+    
+    # 按照格式拼接战绩
+    history_lines = []
+    for i, m in enumerate(matches, 1):
+        status_emoji = "🟢 胜利" if m['win'] else "🔴 失败"
+        mode = m['mode']
+        kda = f"{m['kills']}/{m['deaths']}/{m['assists']}"
+        champ = m['champion']
+        history_lines.append(f"`{i:02d}.` {status_emoji} | 英雄: **{champ}** | KDA: `{kda}` | 模式: {mode}")
+        
+    # Embed description max length is 4096. 20 lines will easily fit.
+    embed.description += "\n".join(history_lines)
+    
+    embed.set_footer(text="注意: Riot API 暂不支持单局 LP(胜点) 变动查询")
+    
+    await interaction.followup.send(embed=embed)
+
+
 def _next_run_seconds(hour=3, minute=0):
     """计算距离下一次运行的秒数（UAE时区）"""
     now_uae = datetime.now(UAE_TZ)
