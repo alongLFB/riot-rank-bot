@@ -35,3 +35,7 @@ id_list2.txt
 
 # 临时测试脚本
 test_*.py
+
+# 日志文件
+*.log
+logs/
