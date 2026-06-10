@@ -268,11 +268,35 @@ async def history_command(interaction: discord.Interaction, server: app_commands
     # 按照格式拼接战绩
     history_lines = []
     for i, m in enumerate(matches, 1):
-        status_emoji = "🟢 胜利" if m['win'] else "🔴 失败"
-        mode = m['mode']
+        status_emoji = "🟢 胜" if m['win'] else "🔴 负"
         kda = f"{m['kills']}/{m['deaths']}/{m['assists']}"
         champ = m['champion']
-        history_lines.append(f"`{i:02d}.` {status_emoji} | 英雄: **{champ}** | KDA: `{kda}` | 模式: {mode}")
+        pos = m.get('position', '未知')
+        
+        # 格式化日期
+        creation_ms = m.get('creation', 0)
+        try:
+            dt = datetime.fromtimestamp(creation_ms / 1000.0)
+            date_str = dt.strftime("%m-%d %H:%M")
+        except Exception:
+            date_str = "未知时间"
+            
+        # 格式化游戏时长
+        duration = m.get('duration', 0)
+        if duration > 10000:  # 兼容极个别旧版毫秒数据
+            duration = duration // 1000
+        mins = duration // 60
+        secs = duration % 60
+        dur_str = f"{mins}:{secs:02d}"
+        
+        # 格式化伤害和补刀
+        dmg = m.get('damage', 0)
+        dmg_str = f"{dmg/1000:.1f}k" if dmg >= 1000 else str(dmg)
+        cs = m.get('cs', 0)
+        
+        # 组装文本
+        line = f"`{i:02d}.` `[{date_str}]` {status_emoji} | **{champ}**({pos}) | ⚔️ `{kda}` | ⏱️ `{dur_str}` | 🗡️ {dmg_str} | 👾 {cs}刀"
+        history_lines.append(line)
         
     # Embed description max length is 4096. 20 lines will easily fit.
     embed.description += "\n".join(history_lines)

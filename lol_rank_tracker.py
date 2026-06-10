@@ -209,8 +209,22 @@ def get_player_history(server: str, game_name: str, tag_line: str) -> Dict:
                 deaths = player_p.get("deaths", 0)
                 assists = player_p.get("assists", 0)
                 
+                # 新增详细数据
+                damage = player_p.get("totalDamageDealtToChampions", 0)
+                cs = player_p.get("totalMinionsKilled", 0) + player_p.get("neutralMinionsKilled", 0)
+                vision = player_p.get("visionScore", 0)
+                position = player_p.get("teamPosition", "")
+                
+                # 转换位置为中文简称
+                pos_map = {"TOP": "上单", "JUNGLE": "打野", "MIDDLE": "中单", "BOTTOM": "AD", "UTILITY": "辅助"}
+                pos_cn = pos_map.get(position, "未知") if position else "未知"
+                
                 # 判断游戏模式
                 game_mode = info.get("gameMode", "CLASSIC")
+                
+                # 时间与时长
+                game_creation = info.get("gameCreation", 0)
+                game_duration = info.get("gameDuration", 0)
                 
                 matches_info.append({
                     "match_id": match_id,
@@ -219,7 +233,13 @@ def get_player_history(server: str, game_name: str, tag_line: str) -> Dict:
                     "kills": kills,
                     "deaths": deaths,
                     "assists": assists,
-                    "mode": game_mode
+                    "mode": game_mode,
+                    "damage": damage,
+                    "cs": cs,
+                    "vision": vision,
+                    "position": pos_cn,
+                    "creation": game_creation,
+                    "duration": game_duration
                 })
                 
         return {"status": "success", "matches": matches_info}
