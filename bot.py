@@ -18,7 +18,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-GUILD_ID = os.getenv("DISCORD_GUILD_ID")  # optional
+GUILD_ID = os.getenv("DISCORD_GUILD_ID") or os.getenv("GUILD_ID")  # optional
 REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 # Match lol_rank_tracker which reads id_list.txt by default
 ID_LIST_FILE = os.getenv("ID_LIST_FILE", "id_list.txt")
