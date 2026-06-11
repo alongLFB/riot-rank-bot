@@ -291,13 +291,12 @@ def generate_mmr_image(your_mmr, corresponding_rank, rank_mmr, current_rank, hea
     </body>
     </html>
     """
-    hti = Html2Image(size=(800, 450))
+    hti = Html2Image(
+        size=(800, 450),
+        custom_flags=['--disable-gpu', '--no-sandbox', '--disable-software-rasterizer', '--disable-dev-shm-usage']
+    )
     filename = f"mmr_{uuid.uuid4().hex}.png"
     filepath = os.path.join("/tmp", filename)
-    hti.screenshot(html_str=html, save_as=filename)
-    # html2image saves in current working directory if only filename is provided, 
-    # so we should use output_path config or move it.
-    # Actually, we can pass a full path to save_as if the library supports it, or just:
     hti.output_path = "/tmp"
     hti.screenshot(html_str=html, save_as=filename)
     return filepath

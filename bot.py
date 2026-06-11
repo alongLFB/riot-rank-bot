@@ -137,19 +137,25 @@ async def on_ready():
 
 
 # /rank 斜杠命令（使用自动补全）
-@tree.command(name="rank", description="查询召唤师段位（示例：Faker#KR1）")
-@app_commands.describe(game_id="召唤师（Name#Tag）")
+@tree.command(name="rank", description="查询召唤师段位和隐藏分")
+@app_commands.describe(server="选择服务器", game_id="召唤师（Name#Tag）")
+@app_commands.choices(server=[
+    app_commands.Choice(name="中东服 (ME1)", value="ME1"),
+    app_commands.Choice(name="欧服西区 (EUW1)", value="EUW1"),
+    app_commands.Choice(name="欧服东北 (EUN1)", value="EUN1")
+])
 @app_commands.autocomplete(game_id=autocomplete_ids)
-async def rank_command(interaction: discord.Interaction, game_id: str):
+async def rank_command(interaction: discord.Interaction, server: app_commands.Choice[str], game_id: str):
     await interaction.response.defer()
     if '#' not in game_id:
         await interaction.followup.send("格式错误！正确格式示例：`Faker#KR1`")
         return
 
     name, tag = parse_riot_id(game_id)
+    server_val = server.value
 
     try:
-        data = await asyncio.to_thread(get_player_rank, name, tag)
+        data = await asyncio.to_thread(get_player_rank, name, tag, server_val.lower())
     except Exception as e:
         logging.exception("查询异常")
         await interaction.followup.send(f"查询失败：{e}")
@@ -185,17 +191,21 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
     embed.set_footer(text="由 RankBot 提供 | 数据来自 Riot API")
     
     # 获取 RankedKings MMR 和生成毛玻璃卡片
-    rk_data = await get_ranked_kings_mmr("ME", game_id)
+    rk_data = await get_ranked_kings_mmr(server_val, game_id)
     
     current_tier = data.get('tier', 'UNRANKED')
     current_rank_num = data.get('rank', '')
     current_rank_str = f"{current_tier} {current_rank_num}".strip()
     
     if rk_data and rk_data.get("status") == "SUCCESS":
-        your_mmr = rk_data.get("your_mmr", data.get("total_score", 0))
-        corresponding_rank = rk_data.get("corresponding_rank", "Estimated Rank")
-        rank_mmr = rk_data.get("tier_average", "-")
-        health_title = rk_data.get("health", {}).get("title")
+        your_mmr = rk_data.get("mmr", data.get("total_score", 0))
+        corresponding_rank = rk_data.get("rank", "Estimated Rank")
+        
+        health_data = rk_data.get("health", {})
+        actual_data = health_data.get("actual", {})
+        
+        rank_mmr = actual_data.get("mmr", "-")
+        health_title = health_data.get("title")
     else:
         # Fallback to estimate_mmr
         your_mmr = data.get("total_score", 0)
