@@ -78,21 +78,6 @@ async def handle_profile_cmd(message: types.Message):
 
 async def execute_profile(chat_id: int, message_id: int, server_val: str, game_id: str):
     name, tag = parse_riot_id(game_id)
-
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith('prof|'))
-async def process_profile_callback(callback_query: types.CallbackQuery):
-    await bot.answer_callback_query(callback_query.id)
-    
-    parts = callback_query.data.split('|')
-    if len(parts) != 3:
-        return
-        
-    _, server_val, game_id = parts
-    name, tag = parse_riot_id(game_id)
-    
-    # Edit message to show loading
-    # await bot.edit_message_text(f"正在查询 **{game_id}** ({server_val})，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
-    
     try:
         data = await asyncio.to_thread(get_player_rank, name, tag, server_val.lower())
     except Exception as e:
@@ -164,6 +149,21 @@ async def process_profile_callback(callback_query: types.CallbackQuery):
 
     await bot.edit_message_text("\n".join(text_lines), chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
 
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('prof|'))
+async def process_profile_callback(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    
+    parts = callback_query.data.split('|')
+    if len(parts) != 3:
+        return
+        
+    _, server_val, game_id = parts
+    msg = callback_query.message
+    await bot.edit_message_text(f"正在查询 **{game_id}** ({server_val})，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    
+    await execute_profile(msg.chat.id, msg.message_id, server_val, game_id)
+
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith('prof|'))
 async def process_profile_callback(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
@@ -207,21 +207,6 @@ async def handle_history_cmd(message: types.Message):
 
 async def execute_history(chat_id: int, message_id: int, server_val: str, game_id: str):
     name, tag = parse_riot_id(game_id)
-
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith('hist|'))
-async def process_history_callback(callback_query: types.CallbackQuery):
-    await bot.answer_callback_query(callback_query.id)
-    
-    parts = callback_query.data.split('|')
-    if len(parts) != 3:
-        return
-        
-    _, server_val, game_id = parts
-    name, tag = parse_riot_id(game_id)
-    
-    # msg = callback_query.message
-    # await bot.edit_message_text(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
-    
     from lol_rank_tracker import get_player_history
     try:
         data = await asyncio.to_thread(get_player_history, server_val, name, tag)
@@ -284,6 +269,21 @@ async def process_history_callback(callback_query: types.CallbackQuery):
     full_text = header + body + footer
     
     await bot.edit_message_text(full_text, chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('hist|'))
+async def process_history_callback(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    
+    parts = callback_query.data.split('|')
+    if len(parts) != 3:
+        return
+        
+    _, server_val, game_id = parts
+    msg = callback_query.message
+    await bot.edit_message_text(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    
+    await execute_history(msg.chat.id, msg.message_id, server_val, game_id)
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith('hist|'))
 async def process_history_callback(callback_query: types.CallbackQuery):
