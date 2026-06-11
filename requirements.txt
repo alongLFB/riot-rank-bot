@@ -51,8 +51,6 @@ h11==0.16.0
     # via
     #   riot-rank-bot (pyproject.toml)
     #   httpcore
-html2image==2.0.7
-    # via riot-rank-bot (pyproject.toml)
 httpcore==1.0.9
     # via
     #   riot-rank-bot (pyproject.toml)
@@ -83,9 +81,7 @@ pyke-lol==3.2.0
 python-dotenv==1.2.2
     # via riot-rank-bot (pyproject.toml)
 requests==2.34.2
-    # via
-    #   riot-rank-bot (pyproject.toml)
-    #   html2image
+    # via riot-rank-bot (pyproject.toml)
 typing-extensions==4.15.0
     # via
     #   riot-rank-bot (pyproject.toml)
@@ -100,8 +96,6 @@ urllib3==2.7.0
     # via
     #   riot-rank-bot (pyproject.toml)
     #   requests
-websocket-client==1.9.0
-    # via html2image
 yarl==1.24.2
     # via
     #   riot-rank-bot (pyproject.toml)

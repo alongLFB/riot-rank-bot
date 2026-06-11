@@ -153,7 +153,6 @@ import urllib.parse
 import asyncio
 import aiohttp
 import uuid
-from html2image import Html2Image
 
 async def get_ranked_kings_mmr(region: str, riot_id: str):
     region_map = {

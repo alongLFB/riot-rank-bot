@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from lol_rank_tracker import get_player_rank, parse_riot_id, get_ranked_kings_mmr, generate_mmr_image
+from lol_rank_tracker import get_player_rank, parse_riot_id, get_ranked_kings_mmr
 
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -144,24 +144,13 @@ async def process_profile_callback(callback_query: types.CallbackQuery):
         rank_mmr = your_mmr
         health_title = "RankedKings API 暂无该玩家数据，已为您显示理论评估值。"
 
-    try:
-        img_path = await asyncio.to_thread(
-            generate_mmr_image,
-            your_mmr, corresponding_rank, rank_mmr, current_rank_str, health_title
-        )
-        
-        with open(img_path, 'rb') as photo:
-            await bot.send_photo(
-                chat_id=msg.chat.id,
-                photo=photo,
-                caption="\n".join(text_lines),
-                parse_mode="Markdown"
-            )
-        # Delete the loading message
-        await bot.delete_message(chat_id=msg.chat.id, message_id=msg.message_id)
-    except Exception as e:
-        logging.exception("Failed to generate MMR image")
-        await bot.edit_message_text("\n".join(text_lines) + f"\n\n*(图片生成失败)*", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    text_lines.append("")
+    text_lines.append(f"**你的隐分 (Your MMR)**: {your_mmr} ({corresponding_rank})")
+    text_lines.append(f"**该段位平均隐分**: {rank_mmr} ({current_rank_str})")
+    if health_title:
+        text_lines.append(f"**账号状态诊断**: {health_title}")
+
+    await bot.edit_message_text("\n".join(text_lines), chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
 
 from datetime import datetime
 

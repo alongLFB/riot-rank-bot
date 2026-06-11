@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
 # Use functions from lol_rank_tracker.py
-from lol_rank_tracker import generate_html, get_player_rank, parse_riot_id, get_ranked_kings_mmr, generate_mmr_image
+from lol_rank_tracker import generate_html, get_player_rank, parse_riot_id, get_ranked_kings_mmr
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -213,17 +213,14 @@ async def rank_command(interaction: discord.Interaction, server: app_commands.Ch
         rank_mmr = your_mmr
         health_title = "RankedKings API 暂无该玩家数据，已为您显示理论评估值。"
 
-    try:
-        img_path = await asyncio.to_thread(
-            generate_mmr_image,
-            your_mmr, corresponding_rank, rank_mmr, current_rank_str, health_title
-        )
-        file = discord.File(img_path, filename="mmr_card.png")
-        embed.set_image(url="attachment://mmr_card.png")
-        await interaction.followup.send(embed=embed, file=file)
-    except Exception as e:
-        logging.exception("Failed to generate MMR image")
-        await interaction.followup.send(embed=embed)
+    # 将隐分信息直接添加到 Embed 文本中
+    embed.add_field(name="你的隐分 (Your MMR)", value=f"{your_mmr} ({corresponding_rank})", inline=False)
+    embed.add_field(name="该段位平均隐分", value=f"{rank_mmr} ({current_rank_str})", inline=False)
+    
+    if health_title:
+        embed.add_field(name="账号状态诊断", value=health_title, inline=False)
+        
+    await interaction.followup.send(embed=embed)
 
 
 
