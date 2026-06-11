@@ -47,24 +47,37 @@ async def send_welcome(message: types.Message):
         "可用命令：\n"
         "`/profile Name#Tag` - 查询召唤师段位与隐分卡片\n"
         "`/history Name#Tag` - 查询最近 20 场对局\n\n"
-        "示例：`/profile Faker#KR1`",
+        "示例：`/profile EUW1 Faker#KR1` 或 `/profile Faker#KR1`",
         parse_mode="Markdown"
     )
 
 @dp.message_handler(commands=['profile', 'rank'])
 async def handle_profile_cmd(message: types.Message):
-    args = message.get_args()
+    args = message.get_args().strip()
     if not args:
-        await message.reply("请提供 Riot ID！\n格式：`/profile Name#Tag`", parse_mode="Markdown")
+        await message.reply("请提供 Riot ID！\n格式：`/profile [服务器] Name#Tag`\n示例：`/profile EUW1 Faker#KR1`", parse_mode="Markdown")
         return
         
-    game_id = args.strip()
+    parts = args.split()
+    if len(parts) >= 2:
+        server_val = parts[0].upper()
+        game_id = parts[1]
+        valid_servers = [s[1] for s in SERVERS]
+        if server_val in valid_servers:
+            msg = await message.reply(f"正在查询 **{game_id}** ({server_val})，请稍候...", parse_mode="Markdown")
+            await execute_profile(msg.chat.id, msg.message_id, server_val, game_id)
+            return
+
+    game_id = parts[0]
     if '#' not in game_id:
-        await message.reply("格式错误！正确格式示例：`Faker#KR1`", parse_mode="Markdown")
+        await message.reply("格式错误！正确格式示例：`/profile EUW1 Faker#KR1` 或 `/profile Faker#KR1`", parse_mode="Markdown")
         return
 
     keyboard = create_server_keyboard("prof", game_id)
     await message.reply(f"请选择 **{game_id}** 所在的服务器：", reply_markup=keyboard, parse_mode="Markdown")
+
+async def execute_profile(chat_id: int, message_id: int, server_val: str, game_id: str):
+    name, tag = parse_riot_id(game_id)
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith('prof|'))
 async def process_profile_callback(callback_query: types.CallbackQuery):
@@ -78,22 +91,21 @@ async def process_profile_callback(callback_query: types.CallbackQuery):
     name, tag = parse_riot_id(game_id)
     
     # Edit message to show loading
-    msg = callback_query.message
-    await bot.edit_message_text(f"正在查询 **{game_id}** ({server_val})，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    # await bot.edit_message_text(f"正在查询 **{game_id}** ({server_val})，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
     
     try:
         data = await asyncio.to_thread(get_player_rank, name, tag, server_val.lower())
     except Exception as e:
         logging.exception("查询异常")
-        await bot.edit_message_text(f"查询失败：{e}", chat_id=msg.chat.id, message_id=msg.message_id)
+        await bot.edit_message_text(f"查询失败：{e}", chat_id=chat_id, message_id=message_id)
         return
 
     status = data.get("status") if isinstance(data, dict) else None
     if status in (None, "not_found"):
-        await bot.edit_message_text(f"未找到玩家：**{game_id}**", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+        await bot.edit_message_text(f"未找到玩家：**{game_id}**", chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
         return
     if status == "error":
-        await bot.edit_message_text(f"查询出错：{data.get('error','未知错误')}", chat_id=msg.chat.id, message_id=msg.message_id)
+        await bot.edit_message_text(f"查询出错：{data.get('error','未知错误')}", chat_id=chat_id, message_id=message_id)
         return
 
     display_name = f"{data.get('game_name') or name}#{data.get('tag_line') or tag}"
@@ -150,24 +162,51 @@ async def process_profile_callback(callback_query: types.CallbackQuery):
     if health_title:
         text_lines.append(f"**账号状态诊断**: {health_title}")
 
-    await bot.edit_message_text("\n".join(text_lines), chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    await bot.edit_message_text("\n".join(text_lines), chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('prof|'))
+async def process_profile_callback(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    
+    parts = callback_query.data.split('|')
+    if len(parts) != 3:
+        return
+        
+    _, server_val, game_id = parts
+    msg = callback_query.message
+    await bot.edit_message_text(f"正在查询 **{game_id}** ({server_val})，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    
+    await execute_profile(msg.chat.id, msg.message_id, server_val, game_id)
 
 from datetime import datetime
 
 @dp.message_handler(commands=['history'])
 async def handle_history_cmd(message: types.Message):
-    args = message.get_args()
+    args = message.get_args().strip()
     if not args:
-        await message.reply("请提供 Riot ID！\n格式：`/history Name#Tag`", parse_mode="Markdown")
+        await message.reply("请提供 Riot ID！\n格式：`/history [服务器] Name#Tag`\n示例：`/history EUW1 Faker#KR1`", parse_mode="Markdown")
         return
         
-    game_id = args.strip()
+    parts = args.split()
+    if len(parts) >= 2:
+        server_val = parts[0].upper()
+        game_id = parts[1]
+        valid_servers = [s[1] for s in SERVERS]
+        if server_val in valid_servers:
+            msg = await message.reply(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", parse_mode="Markdown")
+            await execute_history(msg.chat.id, msg.message_id, server_val, game_id)
+            return
+
+    game_id = parts[0]
     if '#' not in game_id:
-        await message.reply("格式错误！正确格式示例：`Faker#KR1`", parse_mode="Markdown")
+        await message.reply("格式错误！正确格式示例：`/history EUW1 Faker#KR1` 或 `/history Faker#KR1`", parse_mode="Markdown")
         return
 
     keyboard = create_server_keyboard("hist", game_id)
     await message.reply(f"请选择 **{game_id}** 所在的服务器以查询历史战绩：", reply_markup=keyboard, parse_mode="Markdown")
+
+async def execute_history(chat_id: int, message_id: int, server_val: str, game_id: str):
+    name, tag = parse_riot_id(game_id)
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith('hist|'))
 async def process_history_callback(callback_query: types.CallbackQuery):
@@ -180,27 +219,27 @@ async def process_history_callback(callback_query: types.CallbackQuery):
     _, server_val, game_id = parts
     name, tag = parse_riot_id(game_id)
     
-    msg = callback_query.message
-    await bot.edit_message_text(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    # msg = callback_query.message
+    # await bot.edit_message_text(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
     
     from lol_rank_tracker import get_player_history
     try:
         data = await asyncio.to_thread(get_player_history, server_val, name, tag)
     except Exception as e:
         logging.exception("战绩查询异常")
-        await bot.edit_message_text(f"查询失败：{e}", chat_id=msg.chat.id, message_id=msg.message_id)
+        await bot.edit_message_text(f"查询失败：{e}", chat_id=chat_id, message_id=message_id)
         return
 
     if data.get("status") == "not_found":
-        await bot.edit_message_text(f"未找到玩家：**{game_id}** (在服务器 {server_val})", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+        await bot.edit_message_text(f"未找到玩家：**{game_id}** (在服务器 {server_val})", chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
         return
     elif data.get("status") == "error":
-        await bot.edit_message_text(f"查询出错：{data.get('error', '未知错误')}", chat_id=msg.chat.id, message_id=msg.message_id)
+        await bot.edit_message_text(f"查询出错：{data.get('error', '未知错误')}", chat_id=chat_id, message_id=message_id)
         return
         
     matches = data.get("matches", [])
     if not matches:
-        await bot.edit_message_text(f"⚠️ 玩家 **{game_id}** 近期没有对局记录。", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+        await bot.edit_message_text(f"⚠️ 玩家 **{game_id}** 近期没有对局记录。", chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
         return
 
     wins_count = sum(1 for m in matches if m['win'])
@@ -244,7 +283,21 @@ async def process_history_callback(callback_query: types.CallbackQuery):
     
     full_text = header + body + footer
     
-    await bot.edit_message_text(full_text, chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    await bot.edit_message_text(full_text, chat_id=chat_id, message_id=message_id, parse_mode="Markdown")
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('hist|'))
+async def process_history_callback(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    
+    parts = callback_query.data.split('|')
+    if len(parts) != 3:
+        return
+        
+    _, server_val, game_id = parts
+    msg = callback_query.message
+    await bot.edit_message_text(f"正在从 {server_val} 拉取 **{game_id}** 的战绩，请稍候...", chat_id=msg.chat.id, message_id=msg.message_id, parse_mode="Markdown")
+    
+    await execute_history(msg.chat.id, msg.message_id, server_val, game_id)
 
 if __name__ == '__main__':
     logging.info("Starting Telegram Bot...")
