@@ -17,6 +17,7 @@ dependencies = [
     "discord-py==2.7.1",
     "frozenlist==1.8.0",
     "h11==0.16.0",
+    "html2image>=2.0.7",
     "httpcore==1.0.9",
     "httpx==0.28.1",
     "idna==3.18",

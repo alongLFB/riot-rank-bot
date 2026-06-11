@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
 # Use functions from lol_rank_tracker.py
-from lol_rank_tracker import generate_html, get_player_rank, parse_riot_id
+from lol_rank_tracker import generate_html, get_player_rank, parse_riot_id, get_ranked_kings_mmr, generate_mmr_image
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -183,7 +183,38 @@ async def rank_command(interaction: discord.Interaction, game_id: str):
     embed.add_field(name="状态", value="-", inline=False)
 
     embed.set_footer(text="由 RankBot 提供 | 数据来自 Riot API")
-    await interaction.followup.send(embed=embed)
+    
+    # 获取 RankedKings MMR 和生成毛玻璃卡片
+    rk_data = await get_ranked_kings_mmr("ME", game_id)
+    
+    current_tier = data.get('tier', 'UNRANKED')
+    current_rank_num = data.get('rank', '')
+    current_rank_str = f"{current_tier} {current_rank_num}".strip()
+    
+    if rk_data and rk_data.get("status") == "SUCCESS":
+        your_mmr = rk_data.get("your_mmr", data.get("total_score", 0))
+        corresponding_rank = rk_data.get("corresponding_rank", "Estimated Rank")
+        rank_mmr = rk_data.get("tier_average", "-")
+        health_title = rk_data.get("health", {}).get("title")
+    else:
+        # Fallback to estimate_mmr
+        your_mmr = data.get("total_score", 0)
+        corresponding_rank = "Estimated (No API)"
+        rank_mmr = your_mmr
+        health_title = "RankedKings API 暂无该玩家数据，已为您显示理论评估值。"
+
+    try:
+        img_path = await asyncio.to_thread(
+            generate_mmr_image,
+            your_mmr, corresponding_rank, rank_mmr, current_rank_str, health_title
+        )
+        file = discord.File(img_path, filename="mmr_card.png")
+        embed.set_image(url="attachment://mmr_card.png")
+        await interaction.followup.send(embed=embed, file=file)
+    except Exception as e:
+        logging.exception("Failed to generate MMR image")
+        await interaction.followup.send(embed=embed)
+
 
 
 # /refresh 手动刷新命令

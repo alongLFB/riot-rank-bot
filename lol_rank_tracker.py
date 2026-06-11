@@ -32,6 +32,19 @@ RANK_WEIGHT = {
     'IV': 1
 }
 
+def estimate_mmr(tier: str, rank: str, lp: int, win_rate: float) -> int:
+    tier_values = {
+        'IRON': 400, 'BRONZE': 800, 'SILVER': 1200, 'GOLD': 1600,
+        'PLATINUM': 2000, 'EMERALD': 2400, 'DIAMOND': 2800, 'MASTER': 3200,
+        'GRANDMASTER': 3600, 'CHALLENGER': 4000
+    }
+    rank_values = {
+        'IV': 0, 'III': 100, 'II': 200, 'I': 300
+    }
+    base_mmr = tier_values.get(tier.upper(), 1200) + rank_values.get(rank.upper(), 0) + lp
+    win_rate_modifier = (win_rate - 50) * 5 
+    return int(round(base_mmr + win_rate_modifier))
+
 def parse_riot_id(line: str) -> tuple:
     """解析Riot ID，支持多种格式"""
     line = line.strip()
@@ -98,9 +111,7 @@ def get_player_rank(game_name: str, tag_line: str, region_str: str = "me1") -> D
             lp = solo_queue.get("leaguePoints", 0)
 
             # 计算排序权重
-            tier_score = TIER_WEIGHT.get(tier, 0) * 1000
-            rank_score = RANK_WEIGHT.get(rank, 0) * 100
-            total_score = tier_score + rank_score + lp
+            total_score = estimate_mmr(tier, rank, lp, win_rate)
 
             return {
                 'game_name': game_name,
@@ -140,6 +151,157 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import asyncio
+import aiohttp
+import uuid
+from html2image import Html2Image
+
+async def get_ranked_kings_mmr(region: str, riot_id: str):
+    region_map = {
+      'euw1': 'EUW', 'na1': 'NA', 'kr': 'KR', 'eun1': 'EUNE', 
+      'tr1': 'TR', 'ru': 'RU', 'jp1': 'JP', 'me1': 'ME'
+    }
+    rk_region = region_map.get(region.lower()) or re.sub(r'[0-9]', '', region.upper())
+    encoded_id = urllib.parse.quote(riot_id)
+    url = f"https://api.rankedkings.com/lol-mmr/v2/check/{rk_region}/{encoded_id}/RANKED_SOLO/false"
+    
+    headers = {
+        'accept': 'application/json, text/plain, */*',
+        'origin': 'https://rankedkings.com',
+        'referer': 'https://rankedkings.com/',
+        'user-agent': 'Mozilla/5.0'
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        for _ in range(3):
+            try:
+                async with session.get(url, headers=headers) as resp:
+                    text = await resp.text()
+                    if text == 'Accepted':
+                        await asyncio.sleep(2)
+                        continue
+                    if resp.status != 200:
+                        return None
+                    data = json.loads(text)
+                    if data.get("status") == "SUCCESS":
+                        return data
+                    return None
+            except Exception:
+                return None
+    return None
+
+def generate_mmr_image(your_mmr, corresponding_rank, rank_mmr, current_rank, health_title=None) -> str:
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1534796636918-9f1d0ca51d38?auto=format&fit=crop&q=80&w=800') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 450px;
+            width: 800px;
+        }}
+        .overlay {{
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            z-index: 1;
+        }}
+        .content {{
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+        .container {{
+            display: flex;
+            gap: 40px;
+        }}
+        .card {{
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 40px 30px;
+            width: 280px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }}
+        .title {{
+            font-size: 16px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }}
+        .mmr {{
+            font-size: 56px;
+            font-weight: 800;
+            margin: 15px 0;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        .rank {{
+            font-size: 22px;
+            font-weight: 700;
+            color: #f8fafc;
+        }}
+        .health {{
+            margin-top: 30px;
+            font-size: 16px;
+            color: #cbd5e1;
+            font-style: italic;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 25px;
+            border-radius: 50px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="overlay"></div>
+        <div class="content">
+            <div class="container">
+                <div class="card">
+                    <div class="title">Your MMR</div>
+                    <div class="mmr">{your_mmr}</div>
+                    <div class="rank">{corresponding_rank}</div>
+                </div>
+                <div class="card">
+                    <div class="title">Rank's MMR</div>
+                    <div class="mmr">{rank_mmr}</div>
+                    <div class="rank">{current_rank}</div>
+                </div>
+            </div>
+            {f'<div class="health">{health_title}</div>' if health_title else ''}
+        </div>
+    </body>
+    </html>
+    """
+    hti = Html2Image(size=(800, 450))
+    filename = f"mmr_{uuid.uuid4().hex}.png"
+    filepath = os.path.join("/tmp", filename)
+    hti.screenshot(html_str=html, save_as=filename)
+    # html2image saves in current working directory if only filename is provided, 
+    # so we should use output_path config or move it.
+    # Actually, we can pass a full path to save_as if the library supports it, or just:
+    hti.output_path = "/tmp"
+    hti.screenshot(html_str=html, save_as=filename)
+    return filepath
+
 
 def _fetch_json_sync(url, api_key):
     headers = {"X-Riot-Token": api_key, "User-Agent": "Mozilla/5.0"}
